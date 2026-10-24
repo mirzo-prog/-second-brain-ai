@@ -107,6 +107,7 @@ export interface ExerciseItem {
 }
 
 export interface SettingsData {
+  gemini_api_key?: string;
   gemini_api_key_configured: boolean;
   gemini_model: string;
   ollama_base_url: string;
