@@ -1,0 +1,16 @@
+.git
+.github
+.venv
+backend/.venv
+frontend/node_modules
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/uploads/*
+data/backups/*
+data/logs/*
+!data/uploads/.gitkeep
+!data/backups/.gitkeep
+!data/logs/.gitkeep
+.env
+.env.local

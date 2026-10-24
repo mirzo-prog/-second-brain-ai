@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: second-brain-ai
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    autoDeploy: true
+    envVars:
+      - key: PORT
+        value: 8000
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      - key: DEFAULT_LEARNING_MODE
+        value: free
