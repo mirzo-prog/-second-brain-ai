@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -29,6 +29,8 @@ const queryClient = new QueryClient({
 
 const LayoutContent: React.FC = () => {
   const location = useLocation();
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
   const getPageTitle = (pathname: string) => {
     if (pathname === '/') return { title: 'Главная панель', subtitle: 'Обзор вашего прогресса и активные темы' };
@@ -49,9 +51,18 @@ const LayoutContent: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-graphite-950 text-slate-100 font-sans">
-      <Sidebar />
+      <Sidebar
+        isOpen={isMobileMenuOpen}
+        onClose={() => setIsMobileMenuOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
+      />
       <div className="flex-1 flex flex-col min-w-0">
-        <Header title={title} subtitle={subtitle} />
+        <Header
+          title={title}
+          subtitle={subtitle}
+          onOpenMobileMenu={() => setIsMobileMenuOpen(true)}
+        />
         <main className="flex-1 overflow-y-auto">
           <Routes>
             <Route path="/" element={<DashboardPage />} />

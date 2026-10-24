@@ -11,7 +11,7 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Second Brain AI"
     VERSION: str = "1.0.0"
     API_V1_STR: str = "/api"
-    HOST: str = "127.0.0.1"
+    HOST: str = "0.0.0.0"
     PORT: int = 8000
     
     # Storage paths
@@ -23,13 +23,8 @@ class Settings(BaseSettings):
     # Database
     SQL_DEBUG: bool = False
     
-    # CORS (restricted to localhost)
-    CORS_ORIGINS: list[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000",
-    ]
+    # CORS (allows local network & public tunnels)
+    CORS_ORIGINS: list[str] = ["*"]
     
     # AI Providers
     GEMINI_API_KEY: str = ""
