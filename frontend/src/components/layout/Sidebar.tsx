@@ -16,11 +16,13 @@ import {
   X,
   Heart,
   ChevronLeft,
+  MessageSquare,
 } from 'lucide-react';
 
 const navItems = [
   { to: '/', label: 'Главная', icon: LayoutDashboard },
   { to: '/courses', label: 'Мои курсы', icon: BookOpen },
+  { to: '/chat', label: 'ИИ-чат (Gemini)', icon: MessageSquare },
   { to: '/tutor', label: 'ИИ-преподаватель', icon: Bot },
   { to: '/library', label: 'Библиотека', icon: Library },
   { to: '/knowledge-map', label: 'Карта знаний', icon: Network },
@@ -75,7 +77,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <h1 className="font-bold text-sm tracking-wide text-white flex items-center gap-1.5 truncate">
                   Second Brain <span className="text-[10px] px-1.5 py-0.2 rounded bg-brand-indigo/30 text-brand-indigo border border-brand-indigo/40 font-semibold">AI</span>
                 </h1>
-                <p className="text-[11px] text-slate-400 truncate">Интеллект обучения</p>
+                <p className="text-[11px] font-bold bg-gradient-to-r from-brand-blue via-brand-indigo to-brand-purple bg-clip-text text-transparent flex items-center gap-1 truncate">
+                  Made by Mirzo <Heart className="w-2.5 h-2.5 text-red-400 fill-current shrink-0" />
+                </p>
               </div>
             )}
           </div>

@@ -4,6 +4,7 @@ from sqlalchemy import func, desc
 import datetime
 
 from app.core.database import get_db
+from app.core.auth import get_current_user_id
 from app.models.entities import Course, Lesson, LearningSession, SkillProgress, ReviewSchedule, Note
 from app.schemas.schemas import (
     DashboardStatsResponse, CourseSummaryResponse, NoteResponse, LastActiveSessionResponse
@@ -14,10 +15,13 @@ from app.api.routes.sessions import get_last_active_session
 router = APIRouter(prefix="/dashboard", tags=["Dashboard"])
 
 @router.get("", response_model=DashboardStatsResponse)
-def get_dashboard_metrics(db: Session = Depends(get_db)):
+def get_dashboard_metrics(
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
     active_courses = (
         db.query(Course)
-        .filter(Course.is_archived == False)
+        .filter(Course.user_id == user_id, Course.is_archived == False)
         .order_by(Course.updated_at.desc())
         .all()
     )
@@ -71,7 +75,7 @@ def get_dashboard_metrics(db: Session = Depends(get_db)):
     )
 
     # Last active session
-    last_active = get_last_active_session(db)
+    last_active = get_last_active_session(user_id=user_id, db=db)
 
     # Dynamic AI recommendations based on real progress
     recommendations = []

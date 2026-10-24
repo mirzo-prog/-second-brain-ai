@@ -35,6 +35,7 @@ export const TutorPage: React.FC = () => {
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const promptSentRef = useRef<boolean>(false);
 
   const { data: courses = [] } = useQuery({
     queryKey: ['courses'],
@@ -58,6 +59,15 @@ export const TutorPage: React.FC = () => {
       setLearningMode(courseDetail.learning_mode || 'free');
     }
   }, [courseDetail]);
+
+  // Handle incoming prompt query parameter from lesson page
+  useEffect(() => {
+    const promptParam = searchParams.get('prompt');
+    if (promptParam && selectedCourseId > 0 && !promptSentRef.current) {
+      promptSentRef.current = true;
+      chatMutation.mutate(promptParam);
+    }
+  }, [searchParams, selectedCourseId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });

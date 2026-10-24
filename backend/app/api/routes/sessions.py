@@ -4,6 +4,7 @@ from sqlalchemy import desc
 import datetime
 
 from app.core.database import get_db
+from app.core.auth import get_current_user_id
 from app.models.entities import Course, Module, Lesson, LearningSession
 from app.schemas.schemas import LastActiveSessionResponse, SessionPingRequest
 
@@ -13,12 +14,15 @@ def utcnow():
     return datetime.datetime.now(datetime.timezone.utc)
 
 @router.get("/last-active", response_model=LastActiveSessionResponse)
-def get_last_active_session(db: Session = Depends(get_db)):
-    # 1. Look for the most recently accessed lesson in an active course
+def get_last_active_session(
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    # 1. Look for the most recently accessed lesson in an active course belonging to this user
     recent_lesson = (
         db.query(Lesson)
         .join(Course, Course.id == Lesson.course_id)
-        .filter(Course.is_archived == False)
+        .filter(Course.user_id == user_id, Course.is_archived == False)
         .filter(Lesson.last_accessed_at.isnot(None))
         .order_by(desc(Lesson.last_accessed_at))
         .first()
@@ -69,10 +73,10 @@ def get_last_active_session(db: Session = Depends(get_db)):
             welcome_message=f"С возвращением! Вы остановились на уроке «{recent_lesson.title}» в курсе «{course.title}». Продолжим обучение?"
         )
 
-    # 2. Fallback: if no lesson was accessed yet, pick the first lesson of the latest active course
+    # 2. Fallback: if no lesson was accessed yet, pick the first lesson of the latest active course of this user
     latest_course = (
         db.query(Course)
-        .filter(Course.is_archived == False)
+        .filter(Course.user_id == user_id, Course.is_archived == False)
         .order_by(desc(Course.updated_at))
         .first()
     )

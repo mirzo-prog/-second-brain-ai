@@ -1,5 +1,5 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../api/client';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -14,15 +14,40 @@ import {
   ArrowRight,
   FileText,
   Plus,
+  Loader2,
+  Search,
 } from 'lucide-react';
 
 export const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [quickGoal, setQuickGoal] = useState('');
+
   const { data: stats, isLoading, error } = useQuery({
     queryKey: ['dashboardStats'],
     queryFn: api.getDashboardStats,
     refetchInterval: 15000,
   });
+
+  const quickCreateMutation = useMutation({
+    mutationFn: () => api.generateCourseAI(quickGoal.trim(), 'beginner', 'free'),
+    onSuccess: (newCourse) => {
+      queryClient.invalidateQueries({ queryKey: ['courses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
+      const firstLesson = newCourse.modules?.[0]?.lessons?.[0];
+      if (firstLesson) {
+        navigate(`/courses/${newCourse.id}/lessons/${firstLesson.id}`);
+      } else {
+        navigate(`/courses/${newCourse.id}`);
+      }
+    },
+  });
+
+  const handleQuickCreate = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickGoal.trim()) return;
+    quickCreateMutation.mutate();
+  };
 
   const handleResume = () => {
     if (stats?.last_active?.has_active_session && stats.last_active.lesson_id) {
@@ -95,6 +120,51 @@ export const DashboardPage: React.FC = () => {
             </button>
           </div>
         </div>
+      </div>
+
+      {/* Quick Topic Course & Materials Generator */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-graphite-900/90 to-graphite-800/80 border border-brand-indigo/30 shadow-lg space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-blue/20 flex items-center justify-center text-brand-blue">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-white">Создать курс по любой теме с материалами</h2>
+              <p className="text-xs text-slate-400">Введите тему — ИИ найдёт материалы, составит программу и сразу начнёт первый урок</p>
+            </div>
+          </div>
+        </div>
+
+        <form onSubmit={handleQuickCreate} className="flex flex-col sm:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              value={quickGoal}
+              onChange={(e) => setQuickGoal(e.target.value)}
+              placeholder="Например: Python с нуля, История Рима, Веб-разработка, Английский, C++..."
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-graphite-950/80 border border-graphite-700/80 text-white placeholder-slate-500 text-sm focus:outline-none focus:border-brand-indigo transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={!quickGoal.trim() || quickCreateMutation.isPending}
+            className="flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-brand-blue via-brand-indigo to-brand-purple hover:from-blue-600 hover:to-purple-600 text-white font-semibold text-sm shadow-md shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-all shrink-0"
+          >
+            {quickCreateMutation.isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                <span>Создаём курс и ищем материалы...</span>
+              </>
+            ) : (
+              <>
+                <Sparkles className="w-4 h-4" />
+                <span>Создать и начать урок</span>
+              </>
+            )}
+          </button>
+        </form>
       </div>
 
       {/* 4 Summary Stat Cards */}

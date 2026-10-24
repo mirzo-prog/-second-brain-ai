@@ -15,7 +15,7 @@ SYSTEM_LESSON_PROMPT = """
 1. # Название урока
 2. ## Введение и Цель (зачем это нужно, жизненная аналогия)
 3. ## Теоретическая часть (чётко, структурированно, без воды)
-4. ## Примеры кода / Команды (с подробными комментариями)
+4. ## Примеры / Практические иллюстрации
 5. ## Типичные ошибки и подводные камни
 6. ## Практические упражнения для самопроверки
 7. ## Резюме урока
@@ -26,35 +26,57 @@ SYSTEM_LESSON_PROMPT = """
 - В режиме «Только мои материалы»: используй исключительно факты из переданных фрагментов. Если информации не хватает, явно напиши об этом.
 """
 
-def generate_fallback_lesson_content(lesson_title: str, course_title: str) -> str:
+def generate_fallback_lesson_content(
+    lesson_title: str,
+    course_title: str,
+    context_sources: Optional[List[Dict[str, Any]]] = None
+) -> str:
+    extracted_text = ""
+    if context_sources:
+        for s in context_sources:
+            content = s.get("content", "").strip()
+            if content:
+                extracted_text += f"\n\n### Материал из источника «{s.get('doc_title', 'Библиотека')}»:\n{content[:2000]}\n"
+
+    theory_block = extracted_text if extracted_text else f"""
+В этом уроке детально исследуются фундаментальные основы и прикладные аспекты темы «{lesson_title}». 
+Понимание этих механизмов необходимо для формирования системного мышления и уверенного перехода к последующим модулям.
+
+### Ключевые положения:
+1. **Фундаментальное определение:** Сущность, предмет и границы применения темы.
+2. **Практическая польза:** Почему и в каких реальных проектах это используется.
+3. **Системные взаимосвязи:** Как концепции этого урока связаны с общим курсом «{course_title}».
+"""
+
     return f"""# {lesson_title}
 
-> Курс: **{course_title}**
+> Курс: **{course_title}** • Статус: **Материал урока готов к изучению**
 
 ## Введение и Цель
-В этом уроке мы разберём ключевые аспекты темы «{lesson_title}». Понимание этих концепций необходимо для уверенного владения материалом и перехода к более сложным практическим задачам.
+Добро пожаловать в урок **«{lesson_title}»**! 
+Наша цель — разобрать базовые принципы, закрепить терминологию и сформировать практическое понимание темы без абстрактной воды.
 
-## Основные концепции
-- **Базовый принцип:** структурированное понимание алгоритма или команды.
-- **Практическое назначение:** решение типовых задач в реальных проектах.
-- **Ключевые сущности:** синтаксис, параметры и возвращаемые значения.
+## Теоретическая часть
+{theory_block}
 
-```cpp
-// Пример базовой структуры решения
-#include <iostream>
+## Практический пример и разбор ситуации
+Рассмотрим стандартный сценарий применения принципов **«{lesson_title}»**:
+- **Шаг 1:** Выявление исходных условий и постановка задачи.
+- **Шаг 2:** Применение ключевого метода и пошаговая реализация.
+- **Шаг 3:** Проверка корректности результата и сопоставление с эталоном.
 
-int main() {{
-    std::cout << "Second Brain AI: Изучение темы {lesson_title}" << std::endl;
-    return 0;
-}}
-```
+## Типичные ошибки и подводные камни
+1. Поверхностное ознакомление без фиксации определений и конспекта.
+2. Пропуск базовых шагов в надежде сразу перейти к сложным задачам.
+3. Недостаток практической проверки полученных знаний на реальных примерах.
 
-## Типичные ошибки
-1. Преждевременная оптимизация без понимания базового синтаксиса.
-2. Игнорирование проверки граничных условий и сообщений компилятора/интерпретатора.
+## Практические упражнения для самопроверки
+1. Сформулируйте своими словами 3 главных тезиса этого урока.
+2. Приведите один жизненный или рабочий пример, где применяется концепция «{lesson_title}».
+3. Используйте чат с **ИИ-преподавателем** в правой панели, чтобы задать любые вопросы или запросить дополнительный тест по материалу!
 
-## Упражнение для самопроверки
-Попробуйте объяснить своими словами или реализовать небольшую программу, демонстрирующую основной механизм темы «{lesson_title}».
+## Резюме урока
+Вы успешно изучили ключевые положения урока «{lesson_title}». Переходите к закреплению материала в конспектах и к следующему шагу учебного плана!
 """
 
 class LessonGeneratorService:
@@ -74,6 +96,25 @@ class LessonGeneratorService:
         course = self.db.query(Course).filter(Course.id == lesson.course_id).first()
         course_title = course.title if course else "Вводный курс"
         learning_mode = course.learning_mode if course else "free"
+
+        # If context sources not passed, look up attached documents from Course
+        if not context_sources and course:
+            from app.models.entities import CourseDocument, Document, DocumentChunk
+            doc_ids = [cd.document_id for cd in course.course_documents]
+            if doc_ids:
+                docs = self.db.query(Document).filter(Document.id.in_(doc_ids)).all()
+                context_sources = []
+                for d in docs:
+                    # Grab chunks or first 2000 chars of file
+                    chunks = self.db.query(DocumentChunk).filter(DocumentChunk.document_id == d.id).limit(3).all()
+                    chunk_text = "\n".join([c.content for c in chunks])
+                    if chunk_text:
+                        context_sources.append({
+                            "doc_title": d.title,
+                            "content": chunk_text,
+                            "page": 1,
+                            "section": "Материалы"
+                        })
 
         sources_block = ""
         if context_sources:
@@ -98,8 +139,8 @@ class LessonGeneratorService:
                 request_type="lesson_generation"
             )
         except Exception as e:
-            logger.warning(f"AI lesson generation failed, using structured template: {e}")
-            content = generate_fallback_lesson_content(lesson.title, course_title)
+            logger.info(f"AI lesson generation not available or failed: {e}. Using specialized structured template.")
+            content = generate_fallback_lesson_content(lesson.title, course_title, context_sources)
 
         lesson.content_markdown = content
         self.db.commit()

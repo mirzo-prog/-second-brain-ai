@@ -118,12 +118,61 @@ export interface SettingsData {
   backup_count: number;
 }
 
+export interface ChatMessageItem {
+  id: number;
+  session_id: number;
+  sender: 'user' | 'assistant' | 'system';
+  content: string;
+  created_at: string;
+}
+
+export interface ChatSessionSummary {
+  id: number;
+  title: string;
+  message_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ChatSessionDetail {
+  id: number;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  messages: ChatMessageItem[];
+}
+
 const API_BASE = '/api';
+
+export function getUserId(): string {
+  let uid = localStorage.getItem('second_brain_user_id');
+  if (!uid || !uid.trim()) {
+    // Generate unique user ID for this browser or device
+    uid = 'user_' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('second_brain_user_id', uid);
+  }
+  return uid.trim();
+}
+
+export function setUserId(id: string): void {
+  if (id && id.trim()) {
+    localStorage.setItem('second_brain_user_id', id.trim());
+  }
+}
+
+export function getUserName(): string {
+  return localStorage.getItem('second_brain_user_name') || 'Студент';
+}
+
+export function setUserName(name: string): void {
+  localStorage.setItem('second_brain_user_name', name.trim());
+}
 
 async function req<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_BASE}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
+      'X-User-ID': getUserId(),
       ...options?.headers,
     },
     ...options,
@@ -213,6 +262,9 @@ export const api = {
     if (courseId) formData.append('course_id', courseId.toString());
     const res = await fetch(`${API_BASE}/documents/upload`, {
       method: 'POST',
+      headers: {
+        'X-User-ID': getUserId(),
+      },
       body: formData,
     });
     if (!res.ok) {
@@ -273,6 +325,22 @@ export const api = {
   getSettings: () => req<SettingsData>('/system/settings'),
   updateSettings: (data: Partial<SettingsData>) =>
     req<SettingsData>('/system/settings', { method: 'PUT', body: JSON.stringify(data) }),
+  // Free Gemini Chat
+  getChatSessions: () => req<ChatSessionSummary[]>('/chat/sessions'),
+  createChatSession: (title?: string) =>
+    req<ChatSessionDetail>('/chat/sessions', { method: 'POST', body: JSON.stringify({ title }) }),
+  getChatSession: (id: number) => req<ChatSessionDetail>(`/chat/sessions/${id}`),
+  renameChatSession: (id: number, title: string) =>
+    req<ChatSessionSummary>(`/chat/sessions/${id}`, { method: 'PUT', body: JSON.stringify({ title }) }),
+  deleteChatSession: (id: number) => req<void>(`/chat/sessions/${id}`, { method: 'DELETE' }),
+  sendFreeChatMessage: (id: number, content: string) =>
+    req<ChatMessageItem>(`/chat/sessions/${id}/messages`, {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+  regenerateFreeChatMessage: (id: number) =>
+    req<ChatMessageItem>(`/chat/sessions/${id}/regenerate`, { method: 'POST' }),
+
   createBackup: () => req<any>('/backup/create', { method: 'POST' }),
   listBackups: () => req<any[]>('/backup'),
   restoreBackup: (filename: string) =>

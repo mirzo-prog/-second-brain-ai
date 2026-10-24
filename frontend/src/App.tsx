@@ -17,6 +17,7 @@ import { SkillsPage } from './pages/SkillsPage';
 import { StatisticsPage } from './pages/StatisticsPage';
 import { StudyPlanPage } from './pages/StudyPlanPage';
 import { SettingsPage } from './pages/SettingsPage';
+import { GeminiChatPage } from './pages/GeminiChatPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -37,6 +38,7 @@ const LayoutContent: React.FC = () => {
     if (pathname.startsWith('/courses/')) return { title: 'Учебный курс', subtitle: 'Дорожная карта и уроки' };
     if (pathname === '/courses') return { title: 'Мои курсы', subtitle: 'Каталог ваших учебных программ' };
     if (pathname === '/tutor') return { title: 'ИИ-преподаватель', subtitle: 'Интерактивные занятия и консультации' };
+    if (pathname === '/chat') return { title: 'ИИ-чат', subtitle: 'Свободное общение с Google Gemini' };
     if (pathname === '/library') return { title: 'Библиотека материалов', subtitle: 'PDF, DOCX, код и конспекты с RAG' };
     if (pathname === '/knowledge-map') return { title: 'Карта знаний', subtitle: 'Визуальный граф навыков и зависимостей' };
     if (pathname === '/practice') return { title: 'Практика и Песочница', subtitle: 'Выполнение кода и тестирование' };
@@ -70,6 +72,7 @@ const LayoutContent: React.FC = () => {
             <Route path="/courses/:id" element={<CourseDetailPage />} />
             <Route path="/courses/:courseId/lessons/:lessonId" element={<LessonViewPage />} />
             <Route path="/tutor" element={<TutorPage />} />
+            <Route path="/chat" element={<GeminiChatPage />} />
             <Route path="/library" element={<LibraryPage />} />
             <Route path="/knowledge-map" element={<KnowledgeMapPage />} />
             <Route path="/practice" element={<PracticePage />} />

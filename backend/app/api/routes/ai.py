@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any
 
 from app.core.database import get_db
+from app.core.auth import get_current_user_id
 from app.services.course_generator import CourseGeneratorService
 from app.services.lesson_generator import LessonGeneratorService
 from app.services.ai_provider import AIProvider
@@ -22,7 +23,11 @@ class GenerateLessonRequest(BaseModel):
     lesson_id: int
 
 @router.post("/generate-course", response_model=CourseDetailResponse)
-async def generate_course(payload: GenerateCourseRequest, db: Session = Depends(get_db)):
+async def generate_course(
+    payload: GenerateCourseRequest,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
     if not payload.goal.strip():
         raise HTTPException(status_code=400, detail="Укажите учебную цель")
 
@@ -31,7 +36,8 @@ async def generate_course(payload: GenerateCourseRequest, db: Session = Depends(
         goal=payload.goal,
         user_level=payload.user_level,
         learning_mode=payload.learning_mode,
-        target_timeframe=payload.target_timeframe
+        target_timeframe=payload.target_timeframe,
+        user_id=user_id
     )
     
     stats = calculate_course_stats(course)

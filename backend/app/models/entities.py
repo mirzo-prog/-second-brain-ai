@@ -20,6 +20,7 @@ class Course(Base):
     __tablename__ = "courses"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), index=True, default="default_user", nullable=False)
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     target_goal = Column(Text, nullable=True)
@@ -79,6 +80,7 @@ class LearningSession(Base):
     __tablename__ = "learning_sessions"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), index=True, default="default_user", nullable=False)
     course_id = Column(Integer, ForeignKey("courses.id", ondelete="CASCADE"), nullable=False)
     lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True)
     started_at = Column(DateTime, default=utcnow)
@@ -124,6 +126,7 @@ class Document(Base):
     __tablename__ = "documents"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), index=True, default="default_user", nullable=False)
     title = Column(String(255), nullable=False)
     filename = Column(String(255), nullable=False)
     file_path = Column(String(512), nullable=False)
@@ -170,6 +173,7 @@ class Note(Base):
     __tablename__ = "notes"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), index=True, default="default_user", nullable=False)
     course_id = Column(Integer, ForeignKey("courses.id", ondelete="SET NULL"), nullable=True)
     lesson_id = Column(Integer, ForeignKey("lessons.id", ondelete="SET NULL"), nullable=True)
     title = Column(String(255), nullable=False)
@@ -297,3 +301,27 @@ class AIUsage(Base):
     cost_estimate = Column(Float, default=0.0)
     request_type = Column(String(50), default="chat") # chat, course_gen, lesson_gen, rag
     created_at = Column(DateTime, default=utcnow)
+
+class ChatSession(Base):
+    __tablename__ = "chat_sessions"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(String(100), index=True, default="default_user", nullable=False)
+    title = Column(String(255), default="Новый диалог")
+    created_at = Column(DateTime, default=utcnow)
+    updated_at = Column(DateTime, default=utcnow, onupdate=utcnow)
+
+    # Relationships
+    messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan", order_by="ChatMessage.created_at")
+
+class ChatMessage(Base):
+    __tablename__ = "chat_messages"
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    session_id = Column(Integer, ForeignKey("chat_sessions.id", ondelete="CASCADE"), nullable=False)
+    sender = Column(String(20), nullable=False) # user, assistant, system
+    content = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=utcnow)
+
+    # Relationships
+    session = relationship("ChatSession", back_populates="messages")

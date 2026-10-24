@@ -10,7 +10,7 @@ from app.core.config import settings
 from app.core.database import init_db
 from app.api.routes import (
     courses, lessons, sessions, dashboard, notes, backup, system,
-    ai, tutor, documents, skills, practice, reviews, statistics
+    ai, tutor, documents, skills, practice, reviews, statistics, chat
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -54,6 +54,7 @@ app.include_router(skills.router, prefix=settings.API_V1_STR)
 app.include_router(practice.router, prefix=settings.API_V1_STR)
 app.include_router(reviews.router, prefix=settings.API_V1_STR)
 app.include_router(statistics.router, prefix=settings.API_V1_STR)
+app.include_router(chat.router, prefix=settings.API_V1_STR)
 
 @app.get("/api/health")
 def health_check():

@@ -38,6 +38,13 @@ export const LessonViewPage: React.FC = () => {
     enabled: courseId > 0,
   });
 
+  const allLessons = course?.modules?.flatMap((m) => m.lessons) || [];
+  const currentLessonIndex = allLessons.findIndex((l) => l.id === lessonId);
+  const nextLesson =
+    currentLessonIndex >= 0 && currentLessonIndex < allLessons.length - 1
+      ? allLessons[currentLessonIndex + 1]
+      : null;
+
   // Live real study timer: records seconds and pings backend every 30 seconds
   useEffect(() => {
     const timer = setInterval(() => {
@@ -219,6 +226,88 @@ export const LessonViewPage: React.FC = () => {
             }
             return <p key={idx} className="text-slate-300">{block}</p>;
           })}
+        </div>
+      </div>
+
+      {/* Interactive AI Tutor Assistance Bar */}
+      <div className="p-6 rounded-2xl bg-gradient-to-r from-graphite-900 to-indigo-950/40 border border-brand-indigo/30 space-y-3 shadow-lg">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Bot className="w-5 h-5 text-brand-indigo" />
+            <h3 className="text-sm font-bold text-white">Интерактивный ИИ-преподаватель</h3>
+          </div>
+          <span className="text-[11px] text-slate-400 font-mono">Gemini Tutor Context Engine</span>
+        </div>
+
+        <p className="text-xs text-slate-300">
+          ИИ-преподаватель знает контекст этого урока и готов помочь в любую секунду:
+        </p>
+
+        <div className="flex flex-wrap items-center gap-2.5 pt-1">
+          <button
+            onClick={() =>
+              navigate(
+                `/tutor?courseId=${courseId}&lessonId=${lessonId}&prompt=${encodeURIComponent(
+                  `Объясни тему урока «${lesson.title}» проще и понятнее, с жизненной аналогией.`
+                )}`
+              )
+            }
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-graphite-800 hover:bg-brand-indigo border border-graphite-700/80 hover:border-brand-indigo text-xs font-semibold text-slate-200 hover:text-white transition-all shadow-sm"
+          >
+            <span>💡 Объясни проще</span>
+          </button>
+
+          <button
+            onClick={() =>
+              navigate(
+                `/tutor?courseId=${courseId}&lessonId=${lessonId}&prompt=${encodeURIComponent(
+                  `Приведи подробный практический пример по теме «${lesson.title}».`
+                )}`
+              )
+            }
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-graphite-800 hover:bg-brand-indigo border border-graphite-700/80 hover:border-brand-indigo text-xs font-semibold text-slate-200 hover:text-white transition-all shadow-sm"
+          >
+            <span>💻 Покажи пример</span>
+          </button>
+
+          <button
+            onClick={() =>
+              navigate(
+                `/tutor?courseId=${courseId}&lessonId=${lessonId}&prompt=${encodeURIComponent(
+                  `Дай мне проверочное практическое задание по уроку «${lesson.title}».`
+                )}`
+              )
+            }
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-graphite-800 hover:bg-brand-indigo border border-graphite-700/80 hover:border-brand-indigo text-xs font-semibold text-slate-200 hover:text-white transition-all shadow-sm"
+          >
+            <span>📝 Дай задание</span>
+          </button>
+
+          <button
+            onClick={() =>
+              navigate(
+                `/tutor?courseId=${courseId}&lessonId=${lessonId}&prompt=${encodeURIComponent(
+                  `Проверь мои знания по уроку «${lesson.title}»: задай мне 3 вопроса по очереди.`
+                )}`
+              )
+            }
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-graphite-800 hover:bg-brand-indigo border border-graphite-700/80 hover:border-brand-indigo text-xs font-semibold text-slate-200 hover:text-white transition-all shadow-sm"
+          >
+            <span>🎯 Проверь мои знания</span>
+          </button>
+
+          {nextLesson && (
+            <button
+              onClick={() => {
+                toggleCompleteMutation.mutate(true);
+                navigate(`/courses/${courseId}/lessons/${nextLesson.id}`);
+              }}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-gradient-to-r from-brand-blue to-brand-indigo hover:from-blue-600 hover:to-indigo-600 text-xs font-bold text-white shadow-md shadow-indigo-500/20 transition-all ml-auto"
+            >
+              <span>Продолжить урок</span>
+              <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
         </div>
       </div>
 

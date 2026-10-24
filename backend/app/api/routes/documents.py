@@ -7,6 +7,7 @@ from typing import List, Optional
 
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.auth import get_current_user_id
 from app.models.entities import Document, CourseDocument, Course
 from app.schemas.schemas import DocumentResponse
 from app.services.rag_service import RAGService
@@ -19,9 +20,10 @@ MAX_FILE_SIZE = 50 * 1024 * 1024 # 50 MB safety limit
 @router.get("", response_model=List[DocumentResponse])
 def list_documents(
     course_id: Optional[int] = Query(None),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Document)
+    query = db.query(Document).filter(Document.user_id == user_id)
     if course_id:
         query = query.join(CourseDocument, CourseDocument.document_id == Document.id).filter(CourseDocument.course_id == course_id)
     
@@ -46,6 +48,7 @@ async def upload_document(
     file: UploadFile = File(...),
     title: Optional[str] = Form(None),
     course_id: Optional[int] = Form(None),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
     # Safety: sanitize and inspect filename
@@ -78,6 +81,7 @@ async def upload_document(
     doc_title = title.strip() if title and title.strip() else filename
 
     doc = Document(
+        user_id=user_id,
         title=doc_title,
         filename=filename,
         file_path=str(upload_path.resolve()),
@@ -91,7 +95,7 @@ async def upload_document(
 
     # Attach to course if specified
     if course_id:
-        course = db.query(Course).filter(Course.id == course_id).first()
+        course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
         if course:
             course_doc = CourseDocument(course_id=course.id, document_id=doc.id)
             db.add(course_doc)
@@ -119,8 +123,12 @@ async def upload_document(
     )
 
 @router.delete("/{document_id}", status_code=204)
-def delete_document(document_id: int, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == document_id).first()
+def delete_document(
+    document_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
     if not doc:
         raise HTTPException(status_code=404, detail="Документ не найден")
 
@@ -129,9 +137,14 @@ def delete_document(document_id: int, db: Session = Depends(get_db)):
     return None
 
 @router.post("/{document_id}/attach/{course_id}")
-def attach_to_course(document_id: int, course_id: int, db: Session = Depends(get_db)):
-    doc = db.query(Document).filter(Document.id == document_id).first()
-    course = db.query(Course).filter(Course.id == course_id).first()
+def attach_to_course(
+    document_id: int,
+    course_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
     if not doc or not course:
         raise HTTPException(status_code=404, detail="Документ или курс не найден")
 
@@ -145,7 +158,15 @@ def attach_to_course(document_id: int, course_id: int, db: Session = Depends(get
     return {"status": "ok", "message": "Документ привязан к курсу"}
 
 @router.delete("/{document_id}/attach/{course_id}")
-def detach_from_course(document_id: int, course_id: int, db: Session = Depends(get_db)):
+def detach_from_course(
+    document_id: int,
+    course_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    doc = db.query(Document).filter(Document.id == document_id, Document.user_id == user_id).first()
+    if not doc:
+        raise HTTPException(status_code=404, detail="Документ не найден")
     cd = db.query(CourseDocument).filter(
         CourseDocument.document_id == document_id,
         CourseDocument.course_id == course_id

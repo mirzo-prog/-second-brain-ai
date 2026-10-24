@@ -41,7 +41,12 @@ export const CoursesPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['dashboardStats'] });
       setIsModalOpen(false);
       setGoal('');
-      navigate(`/courses/${newCourse.id}`);
+      const firstLesson = newCourse.modules?.[0]?.lessons?.[0];
+      if (firstLesson) {
+        navigate(`/courses/${newCourse.id}/lessons/${firstLesson.id}`);
+      } else {
+        navigate(`/courses/${newCourse.id}`);
+      }
     },
   });
 
@@ -237,7 +242,7 @@ export const CoursesPage: React.FC = () => {
                     rows={3}
                     value={goal}
                     onChange={(e) => setGoal(e.target.value)}
-                    placeholder="Например: «Хочу изучить C++ с нуля» или «Linux и кибербезопасность за 6 месяцев»"
+                    placeholder="Например: «Хочу изучить математику с нуля», «Создай курс биологии», «Научи меня японскому языку», «История Узбекистана», «Python с нуля»..."
                     className="w-full bg-graphite-800 border border-graphite-700 rounded-xl p-3 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-brand-indigo"
                   />
                 </div>
@@ -282,12 +287,12 @@ export const CoursesPage: React.FC = () => {
                   {aiGenerateMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>ИИ проектирует учебную дорожную карту...</span>
+                      <span>ИИ ищет материалы и проектирует курс...</span>
                     </>
                   ) : (
                     <>
                       <Sparkles className="w-4 h-4" />
-                      <span>Сгенерировать курс</span>
+                      <span>Сгенерировать курс и начать урок</span>
                     </>
                   )}
                 </button>

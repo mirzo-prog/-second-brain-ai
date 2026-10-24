@@ -4,6 +4,7 @@ from typing import List, Optional
 import datetime
 
 from app.core.database import get_db
+from app.core.auth import get_current_user_id
 from app.models.entities import Course, Module, Lesson
 from app.schemas.schemas import (
     CourseCreate, CourseUpdate, CourseSummaryResponse, CourseDetailResponse,
@@ -25,9 +26,10 @@ def calculate_course_stats(course: Course) -> dict:
 @router.get("", response_model=List[CourseSummaryResponse])
 def get_courses(
     include_archived: bool = Query(False),
+    user_id: str = Depends(get_current_user_id),
     db: Session = Depends(get_db)
 ):
-    query = db.query(Course)
+    query = db.query(Course).filter(Course.user_id == user_id)
     if not include_archived:
         query = query.filter(Course.is_archived == False)
     courses = query.order_by(Course.updated_at.desc()).all()
@@ -54,8 +56,13 @@ def get_courses(
     return result
 
 @router.post("", response_model=CourseDetailResponse, status_code=201)
-def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
+def create_course(
+    payload: CourseCreate,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
     course = Course(
+        user_id=user_id,
         title=payload.title,
         description=payload.description,
         target_goal=payload.target_goal,
@@ -110,8 +117,12 @@ def create_course(payload: CourseCreate, db: Session = Depends(get_db)):
     )
 
 @router.get("/{course_id}", response_model=CourseDetailResponse)
-def get_course_detail(course_id: int, db: Session = Depends(get_db)):
-    course = db.query(Course).filter(Course.id == course_id).first()
+def get_course_detail(
+    course_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Курс не найден")
     
@@ -134,8 +145,13 @@ def get_course_detail(course_id: int, db: Session = Depends(get_db)):
     )
 
 @router.put("/{course_id}", response_model=CourseSummaryResponse)
-def update_course(course_id: int, payload: CourseUpdate, db: Session = Depends(get_db)):
-    course = db.query(Course).filter(Course.id == course_id).first()
+def update_course(
+    course_id: int,
+    payload: CourseUpdate,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Курс не найден")
 
@@ -164,8 +180,12 @@ def update_course(course_id: int, payload: CourseUpdate, db: Session = Depends(g
     )
 
 @router.delete("/{course_id}", status_code=204)
-def delete_course(course_id: int, db: Session = Depends(get_db)):
-    course = db.query(Course).filter(Course.id == course_id).first()
+def delete_course(
+    course_id: int,
+    user_id: str = Depends(get_current_user_id),
+    db: Session = Depends(get_db)
+):
+    course = db.query(Course).filter(Course.id == course_id, Course.user_id == user_id).first()
     if not course:
         raise HTTPException(status_code=404, detail="Курс не найден")
     db.delete(course)

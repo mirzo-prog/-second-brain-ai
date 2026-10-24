@@ -1,3 +1,4 @@
+import os
 import httpx
 import json
 import logging
@@ -20,7 +21,11 @@ class AIProvider:
 
     def _load_config(self):
         settings_map = {s.key: s.value for s in self.db.query(Setting).all()}
-        self.gemini_key = settings_map.get("gemini_api_key", "").strip()
+        self.gemini_key = (
+            settings_map.get("gemini_api_key", "").strip()
+            or getattr(settings, "GEMINI_API_KEY", "")
+            or os.environ.get("GEMINI_API_KEY", "").strip()
+        )
         self.gemini_model = settings_map.get("gemini_model", "gemini-2.5-flash")
         self.ollama_url = settings_map.get("ollama_base_url", "http://127.0.0.1:11434").rstrip("/")
         self.ollama_model = settings_map.get("ollama_model", "llama3:latest")

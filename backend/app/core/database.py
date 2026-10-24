@@ -38,6 +38,16 @@ def init_db():
     # Create tables
     Base.metadata.create_all(bind=engine)
     
+    # Run lightweight schema migrations for user_id column
+    with engine.connect() as conn:
+        for tbl in ["courses", "documents", "notes", "learning_sessions", "chat_sessions"]:
+            try:
+                conn.execute(text(f"ALTER TABLE {tbl} ADD COLUMN user_id VARCHAR(100) DEFAULT 'default_user';"))
+                conn.commit()
+            except Exception:
+                # Column already exists
+                pass
+
     # Initialize SQLite FTS5 table for RAG full-text keyword search
     with engine.connect() as conn:
         conn.execute(text("""
