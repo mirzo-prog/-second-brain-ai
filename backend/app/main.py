@@ -1,6 +1,9 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
+from pathlib import Path
 import logging
 
 from app.core.config import settings
@@ -59,3 +62,21 @@ def health_check():
         "service": settings.PROJECT_NAME,
         "version": settings.VERSION
     }
+
+# SPA Website Serving: single unified URL for the entire application
+FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
+
+if FRONTEND_DIST.exists():
+    assets_dir = FRONTEND_DIST / "assets"
+    if assets_dir.exists():
+        app.mount("/assets", StaticFiles(directory=str(assets_dir)), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api") or full_path.startswith("docs") or full_path.startswith("openapi.json"):
+            raise HTTPException(status_code=404, detail="Not Found")
+        
+        target_file = FRONTEND_DIST / full_path
+        if target_file.is_file():
+            return FileResponse(target_file)
+        return FileResponse(FRONTEND_DIST / "index.html")

@@ -1,10 +1,10 @@
 [Desktop Entry]
 Name=Second Brain AI
-GenericName=AI Learning & Knowledge System
-Comment=Персональная интеллектуальная система обучения и отслеживания навыков
-Exec=/home/mirzo/Projects/second-brain-ai/scripts/run_app.sh
-Terminal=true
+GenericName=AI Learning Website
+Comment=Персональная интеллектуальная система обучения (Веб-сайт)
+Exec=/home/mirzo/Projects/second-brain-ai/scripts/start_website.sh
+Terminal=false
 Type=Application
 Icon=accessories-dictionary
-Categories=Education;Development;Science;
-Keywords=learning;ai;tutor;secondbrain;cpp;linux;education;
+Categories=Education;Development;Science;Network;
+Keywords=learning;ai;tutor;secondbrain;cpp;linux;website;
