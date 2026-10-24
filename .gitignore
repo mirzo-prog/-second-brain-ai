@@ -1,0 +1,40 @@
+# Python & Environments
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/.venv/
+.venv/
+env/
+venv/
+ENV/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node & Frontend
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# User Data & Uploads
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/uploads/*
+data/backups/*
+data/logs/*
+!data/uploads/.gitkeep
+!data/backups/.gitkeep
+!data/logs/.gitkeep
+
+# Environment secrets
+.env
+.env.local
