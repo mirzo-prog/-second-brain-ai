@@ -62,8 +62,11 @@ class Lesson(Base):
     title = Column(String(255), nullable=False)
     description = Column(Text, nullable=True)
     content_markdown = Column(Text, nullable=True, default="")
+    presentation_json = Column(Text, nullable=True, default="[]")
+    quiz_json = Column(Text, nullable=True, default="[]")
     order_index = Column(Integer, default=0)
     is_completed = Column(Boolean, default=False)
+    status = Column(String(50), default="not_started") # not_started, in_progress, viewed, practice_completed, mastered
     last_accessed_at = Column(DateTime, nullable=True)
     estimated_minutes = Column(Integer, default=20)
     created_at = Column(DateTime, default=utcnow)

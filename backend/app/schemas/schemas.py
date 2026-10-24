@@ -28,6 +28,7 @@ class LessonUpdate(BaseModel):
 
 class LessonProgressUpdate(BaseModel):
     is_completed: bool
+    status: Optional[str] = None
 
 class LessonResponse(BaseModel):
     id: int
@@ -36,8 +37,11 @@ class LessonResponse(BaseModel):
     title: str
     description: Optional[str] = None
     content_markdown: Optional[str] = ""
+    presentation_json: Optional[str] = "[]"
+    quiz_json: Optional[str] = "[]"
     order_index: int
     is_completed: bool
+    status: Optional[str] = "not_started"
     last_accessed_at: Optional[datetime] = None
     estimated_minutes: int
     created_at: datetime

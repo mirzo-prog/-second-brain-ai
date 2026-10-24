@@ -13,7 +13,12 @@ import {
   Save,
   Loader2,
   ChevronRight,
+  Airplay,
+  Maximize2,
 } from 'lucide-react';
+import { PresentationViewer } from '../components/education/PresentationViewer';
+import { InteractiveQuiz } from '../components/education/InteractiveQuiz';
+import { FocusModeModal } from '../components/education/FocusModeModal';
 
 export const LessonViewPage: React.FC = () => {
   const { courseId: cId, lessonId: lId } = useParams<{ courseId: string; lessonId: string }>();
@@ -25,6 +30,8 @@ export const LessonViewPage: React.FC = () => {
   const [studySeconds, setStudySeconds] = useState(0);
   const [noteContent, setNoteContent] = useState('');
   const [noteSaved, setNoteSaved] = useState(false);
+  const [isPresentationOpen, setIsPresentationOpen] = useState(false);
+  const [isFocusModeOpen, setIsFocusModeOpen] = useState(false);
 
   const { data: lesson, isLoading, error } = useQuery({
     queryKey: ['lesson', lessonId],
@@ -159,6 +166,26 @@ export const LessonViewPage: React.FC = () => {
         {lesson.description && <p className="text-sm text-slate-400">{lesson.description}</p>}
 
         <div className="flex flex-wrap items-center gap-3 pt-2">
+          {/* Open Presentation */}
+          <button
+            onClick={() => setIsPresentationOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 text-white text-xs font-semibold shadow transition-all"
+            title="Открыть интерактивную презентацию слайдов к уроку"
+          >
+            <Airplay className="w-3.5 h-3.5" />
+            <span>Открыть презентацию</span>
+          </button>
+
+          {/* Focus Mode */}
+          <button
+            onClick={() => setIsFocusModeOpen(true)}
+            className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-purple-600/90 hover:bg-purple-500 text-white text-xs font-semibold shadow transition-all"
+            title="Перейти в чистый режим фокуса с таймером Помодоро"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span>Режим фокуса</span>
+          </button>
+
           <button
             onClick={() => navigate(`/tutor?courseId=${courseId}&lessonId=${lessonId}`)}
             className="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-brand-blue to-brand-indigo hover:from-blue-600 hover:to-indigo-600 text-white text-xs font-semibold shadow transition-all"
@@ -228,6 +255,17 @@ export const LessonViewPage: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Interactive Quiz Component */}
+      <InteractiveQuiz
+        lessonTitle={lesson.title}
+        quizJson={lesson.quiz_json}
+        onComplete={(score, total) => {
+          if (score / total >= 0.6) {
+            toggleCompleteMutation.mutate(true);
+          }
+        }}
+      />
 
       {/* Interactive AI Tutor Assistance Bar */}
       <div className="p-6 rounded-2xl bg-gradient-to-r from-graphite-900 to-indigo-950/40 border border-brand-indigo/30 space-y-3 shadow-lg">
@@ -353,6 +391,24 @@ export const LessonViewPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Interactive Presentation Viewer Modal */}
+      <PresentationViewer
+        isOpen={isPresentationOpen}
+        onClose={() => setIsPresentationOpen(false)}
+        lessonTitle={lesson.title}
+        courseTitle={course?.title}
+        slidesJson={lesson.presentation_json}
+      />
+
+      {/* Focus Mode Distraction-Free Modal */}
+      <FocusModeModal
+        isOpen={isFocusModeOpen}
+        onClose={() => setIsFocusModeOpen(false)}
+        lessonTitle={lesson.title}
+        courseTitle={course?.title}
+        contentMarkdown={lesson.content_markdown}
+      />
     </div>
   );
 };

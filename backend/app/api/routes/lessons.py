@@ -20,6 +20,8 @@ def get_lesson(lesson_id: int, db: Session = Depends(get_db)):
     # Update last_accessed_at for both lesson and course
     now = utcnow()
     lesson.last_accessed_at = now
+    if not lesson.status or lesson.status == "not_started":
+        lesson.status = "in_progress"
     course = db.query(Course).filter(Course.id == lesson.course_id).first()
     if course:
         course.updated_at = now
@@ -52,6 +54,13 @@ def update_lesson_progress(lesson_id: int, payload: LessonProgressUpdate, db: Se
 
     now = utcnow()
     lesson.is_completed = payload.is_completed
+    if payload.status:
+        lesson.status = payload.status
+    elif payload.is_completed:
+        lesson.status = "mastered"
+    else:
+        lesson.status = "in_progress"
+
     lesson.last_accessed_at = now
     lesson.updated_at = now
 

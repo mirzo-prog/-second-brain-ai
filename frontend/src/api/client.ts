@@ -21,6 +21,9 @@ export interface Lesson {
   title: string;
   description?: string;
   content_markdown?: string;
+  presentation_json?: string;
+  quiz_json?: string;
+  status?: string;
   order_index: number;
   is_completed: boolean;
   last_accessed_at?: string;

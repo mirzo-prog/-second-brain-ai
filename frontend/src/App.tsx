@@ -18,6 +18,8 @@ import { StatisticsPage } from './pages/StatisticsPage';
 import { StudyPlanPage } from './pages/StudyPlanPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { GeminiChatPage } from './pages/GeminiChatPage';
+import { MusicProvider } from './context/MusicContext';
+import { MusicPlayer } from './components/common/MusicPlayer';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -90,9 +92,12 @@ const LayoutContent: React.FC = () => {
 export const App: React.FC = () => {
   return (
     <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <LayoutContent />
-      </BrowserRouter>
+      <MusicProvider>
+        <BrowserRouter>
+          <LayoutContent />
+          <MusicPlayer />
+        </BrowserRouter>
+      </MusicProvider>
     </QueryClientProvider>
   );
 };

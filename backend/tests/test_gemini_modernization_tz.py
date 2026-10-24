@@ -182,3 +182,79 @@ def test_10_existing_courses_regression(client):
     # Dashboard returns stats
     dash = client.get("/api/dashboard", headers={"X-User-ID": "dev_user"}).json()
     assert "active_courses_count" in dash
+
+def test_11_presentation_slides_and_quiz_generation(client):
+    """Тест 11 — Презентация и мини-тест: урок генерирует presentation_json и quiz_json."""
+    import json
+    headers = {"X-User-ID": "test_presentation_user"}
+    course = client.post(
+        "/api/ai/generate-course",
+        headers=headers,
+        json={"goal": "Биология: структура клетки", "user_level": "intermediate"}
+    ).json()
+    first_lesson_id = course["modules"][0]["lessons"][0]["id"]
+    lesson_data = client.get(f"/api/lessons/{first_lesson_id}").json()
+
+    assert lesson_data["presentation_json"] is not None
+    slides = json.loads(lesson_data["presentation_json"])
+    assert isinstance(slides, list)
+    assert len(slides) >= 3
+    assert "title" in slides[0]
+    assert "bullets" in slides[0]
+
+    assert lesson_data["quiz_json"] is not None
+    quiz = json.loads(lesson_data["quiz_json"])
+    assert isinstance(quiz, list)
+    assert len(quiz) >= 1
+    assert "question" in quiz[0]
+    assert "options" in quiz[0]
+    assert "correct_index" in quiz[0]
+    assert "explanation" in quiz[0]
+
+def test_12_lesson_status_lifecycle(client):
+    """Тест 12 — Жизненный цикл статуса урока (not_started -> in_progress -> mastered)."""
+    headers = {"X-User-ID": "test_lifecycle_user"}
+    course = client.post(
+        "/api/courses",
+        headers=headers,
+        json={
+            "title": "Статусы уроков",
+            "user_level": "beginner",
+            "modules": [
+                {
+                    "title": "Модуль 1",
+                    "lessons": [{"title": "Урок 1", "estimated_minutes": 15}]
+                }
+            ]
+        }
+    ).json()
+
+    # Get course detail to retrieve created lesson id
+    c_detail = client.get(f"/api/courses/{course['id']}", headers=headers).json()
+    les = c_detail["modules"][0]["lessons"][0]
+
+    # Initial get moves status to in_progress
+    les_get = client.get(f"/api/lessons/{les['id']}").json()
+    assert les_get["status"] in ["not_started", "in_progress"]
+
+    # Mark as completed
+    prog_resp = client.put(f"/api/lessons/{les['id']}/progress", json={"is_completed": True, "status": "mastered"})
+    assert prog_resp.status_code == 200
+    assert prog_resp.json()["status"] == "mastered"
+    assert prog_resp.json()["is_completed"] is True
+
+def test_13_ancient_rome_course_generation(client):
+    """Тест 13 — История: «Расскажи всё про Древний Рим»."""
+    headers = {"X-User-ID": "test_rome_user"}
+    resp = client.post(
+        "/api/ai/generate-course",
+        headers=headers,
+        json={"goal": "Расскажи всё про Древний Рим", "user_level": "beginner"}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "рим" in data["title"].lower() or "рим" in data["target_goal"].lower()
+    first_lesson = data["modules"][0]["lessons"][0]
+    assert len(first_lesson["content_markdown"]) > 100
+    # Must contain verified historical facts
+    assert "рим" in first_lesson["content_markdown"].lower()

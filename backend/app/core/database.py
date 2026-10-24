@@ -48,6 +48,14 @@ def init_db():
                 # Column already exists
                 pass
 
+        # Migration for lesson status, presentation and quiz
+        for col, col_type in [("status", "VARCHAR(50) DEFAULT 'not_started'"), ("presentation_json", "TEXT DEFAULT '[]'"), ("quiz_json", "TEXT DEFAULT '[]'")]:
+            try:
+                conn.execute(text(f"ALTER TABLE lessons ADD COLUMN {col} {col_type};"))
+                conn.commit()
+            except Exception:
+                pass
+
     # Initialize SQLite FTS5 table for RAG full-text keyword search
     with engine.connect() as conn:
         conn.execute(text("""
