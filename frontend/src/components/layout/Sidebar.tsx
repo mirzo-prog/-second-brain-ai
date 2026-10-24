@@ -14,7 +14,6 @@ import {
   Brain,
   ShieldCheck,
   X,
-  Heart,
   ChevronLeft,
   MessageSquare,
 } from 'lucide-react';
@@ -77,8 +76,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <h1 className="font-bold text-sm tracking-wide text-white flex items-center gap-1.5 truncate">
                   Second Brain <span className="text-[10px] px-1.5 py-0.2 rounded bg-brand-indigo/30 text-brand-indigo border border-brand-indigo/40 font-semibold">AI</span>
                 </h1>
-                <p className="text-[11px] font-bold bg-gradient-to-r from-brand-blue via-brand-indigo to-brand-purple bg-clip-text text-transparent flex items-center gap-1 truncate">
-                  Made by Mirzo <Heart className="w-2.5 h-2.5 text-red-400 fill-current shrink-0" />
+                <p className="text-[11px] font-bold bg-gradient-to-r from-brand-blue via-brand-indigo to-brand-purple bg-clip-text text-transparent truncate">
+                  Made by Mirzo
                 </p>
               </div>
             )}
@@ -149,17 +148,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
           )}
 
           {/* MADE BY MIRZO SIGNATURE */}
-          <div className="pt-2 border-t border-graphite-700/50 flex items-center justify-between text-xs">
+          <div className="pt-2 border-t border-graphite-700/50 flex items-center justify-center text-xs">
             {!isCollapsed ? (
-              <>
-                <span className="text-[11px] text-slate-400 flex items-center gap-1">
-                  <span>Сделано с</span>
-                  <Heart className="w-3 h-3 text-red-400 fill-current" />
-                </span>
-                <span className="text-xs font-extrabold tracking-wider bg-gradient-to-r from-brand-blue via-brand-indigo to-brand-purple bg-clip-text text-transparent uppercase">
-                  Made by Mirzo
-                </span>
-              </>
+              <span className="text-xs font-extrabold tracking-wider bg-gradient-to-r from-brand-blue via-brand-indigo to-brand-purple bg-clip-text text-transparent uppercase">
+                Made by Mirzo
+              </span>
             ) : (
               <span className="text-[10px] font-black text-indigo-400 mx-auto" title="Made by Mirzo">
                 M

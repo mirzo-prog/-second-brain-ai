@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, getUserId, setUserId, getUserName, setUserName } from '../../api/client';
-import { Play, Sparkles, Menu, Heart, User, Check, X } from 'lucide-react';
+import { Play, Sparkles, Menu, User, Check, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 interface HeaderProps {
@@ -75,9 +75,8 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle, onOpenMobileMen
           <div className="flex items-center gap-2">
             <h2 className="text-base sm:text-lg font-bold text-white tracking-tight truncate">{title}</h2>
             {/* Signature badge in Header */}
-            <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-brand-purple/15 text-purple-300 border border-brand-purple/30 shrink-0">
-              <Heart className="w-2.5 h-2.5 text-red-400 fill-current" />
-              <span>Made by Mirzo</span>
+            <span className="inline-flex items-center text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-brand-purple/15 text-purple-300 border border-brand-purple/30 shrink-0">
+              Made by Mirzo
             </span>
           </div>
           {subtitle && <p className="text-[11px] text-slate-400 truncate hidden sm:block">{subtitle}</p>}
