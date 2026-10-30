@@ -29,7 +29,7 @@ def clean(text):
 class GeminiMind:
     def __init__(self, key=None, model=None, tts_model=None, transport=None):
         self.key = key if key is not None else os.getenv('CAT_GEMINI_API_KEY', os.getenv('GEMINI_API_KEY', ''))
-        self.model = model or os.getenv('CAT_GEMINI_MODEL', 'gemini-2.5-flash')
+        self.model = model or os.getenv('CAT_GEMINI_MODEL', 'gemini-3.5-flash')
         self.tts_model = tts_model or os.getenv('CAT_TTS_MODEL', 'gemini-3.8-flash-lite-tts')
         self.client = httpx.AsyncClient(base_url='https://generativelanguage.googleapis.com/v1beta/',
                                        headers={'x-goog-api-key': self.key}, timeout=40, transport=transport)
