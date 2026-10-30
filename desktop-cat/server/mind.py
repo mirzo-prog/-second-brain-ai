@@ -33,7 +33,7 @@ def clean(text):
 class GeminiMind:
     def __init__(self, key=None, model=None, tts_model=None, transport=None):
         self.key = key if key is not None else os.getenv('CAT_GEMINI_API_KEY', os.getenv('GEMINI_API_KEY', ''))
-        self.model = model or os.getenv('CAT_GEMINI_MODEL', 'gemini-3.5-flash')
+        self.model = model or os.getenv('CAT_GEMINI_MODEL', 'gemini-3.5-flash-lite')
         self.tts_model = tts_model or os.getenv('CAT_TTS_MODEL', 'gemini-3.8-flash-lite-tts')
         self.client = httpx.AsyncClient(base_url='https://generativelanguage.googleapis.com/v1beta/',
                                        headers={'x-goog-api-key': self.key}, timeout=40, transport=transport)
@@ -99,23 +99,41 @@ class GeminiMind:
             },
         }
 
+        models_to_try = list(dict.fromkeys([self.model, 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest']))
         response = None
-        for attempt in range(2):
-            try:
-                response = await self.client.post('models/' + self.model + ':generateContent', json=body)
-                if response.status_code in (429, 503) and attempt == 0:
-                    logger.warning("Gemini transient %s, retrying after 1.5s", response.status_code)
-                    await asyncio.sleep(1.5)
-                    continue
-                response.raise_for_status()
+        last_err = None
+        for current_model in models_to_try:
+            for attempt in range(2):
+                try:
+                    response = await self.client.post('models/' + current_model + ':generateContent', json=body)
+                    if response.status_code in (429, 503) and attempt == 0:
+                        logger.warning("Gemini model %s transient %s, retrying after 1.5s", current_model, response.status_code)
+                        await asyncio.sleep(1.5)
+                        continue
+                    if response.status_code in (404, 429, 503):
+                        logger.warning("Gemini model %s returned %s, trying next fallback model", current_model, response.status_code)
+                        break
+                    response.raise_for_status()
+                    break
+                except httpx.HTTPStatusError as e:
+                    last_err = e
+                    if attempt == 0 and e.response.status_code in (429, 503):
+                        logger.warning("Gemini model %s transient HTTP %s, retrying", current_model, e.response.status_code)
+                        await asyncio.sleep(1.5)
+                        continue
+                    logger.warning("Gemini model %s failed: %s %s", current_model, e.response.status_code, e.response.text[:200])
+                    break
+                except Exception as e:
+                    last_err = e
+                    logger.warning("Gemini model %s failed with exception: %s", current_model, e)
+                    break
+            if response is not None and response.status_code == 200:
                 break
-            except httpx.HTTPStatusError as e:
-                if attempt == 0 and e.response.status_code in (429, 503):
-                    logger.warning("Gemini transient HTTPStatusError %s, retrying", e.response.status_code)
-                    await asyncio.sleep(1.5)
-                    continue
-                logger.error("Gemini request failed: %s %s", e.response.status_code, e.response.text[:300])
-                raise
+
+        if response is None or response.status_code != 200:
+            if last_err:
+                raise last_err
+            raise ValueError('All Gemini fallback models exhausted or unavailable')
 
         data = response.json()
         candidates = data.get('candidates', [])
