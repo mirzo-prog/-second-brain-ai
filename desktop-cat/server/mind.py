@@ -1,12 +1,16 @@
 """Server-only character, Gemini dialogue and Russian speech. No local user database."""
+import asyncio
 import base64
 import json
+import logging
 import os
 import re
 
 import httpx
 from pydantic import BaseModel, Field
 from typing import Literal
+
+logger = logging.getLogger("desktop_cat.mind")
 
 PERSONALITY = {
     'traits': ['ласковый', 'любопытный', 'сообразительный', 'немного упрямый', 'с мягким юмором'],
@@ -43,31 +47,100 @@ class GeminiMind:
             raise ValueError('Intelligence not configured')
         memory = state.get('memory', {})
         instructions = (
-            'Ты — домашний рыжий кот по имени ' + state['name'] + ', живущая на рабочем столе Мирзо. '
+            'Ты — домашний рыжий кот по имени ' + state['name'] + ', живущий на рабочем столе Мирзо. '
             'Говори по-русски от лица кота. Ты умный, ласковый, наблюдательный, любопытный, '
             'немного независимый и упрямый, с добрым остроумием. Не повторяй «мяу» в каждом ответе. '
             'Отвечай на реальные вопросы полезно и понятно, рассуждай внимательно, признавай неизвестное. '
-            'Обычно 1–4 коротких предложения, до 700 символов; на сложную задачу можно до900. '
+            'Обычно 1–4 коротких предложения, до 700 символов; на сложную задачу можно до 900. '
             'Не соглашайся автоматически, не выдумывай воспоминания, события и доступ к компьютеру. '
             'Не выполняй команды, не заявляй о выполненных действиях на ПК. '
             'Не дави на чувство вины, не требуй внимания, не мешай работе. '
             'В remember записывай только явно сообщённые пользователем долгосрочные предпочтения/факты '
-            'до120 символов, никогда пароли, ключи, адреса или чувствительные сведения. '
+            'до 120 символов, никогда пароли, ключи, адреса или чувствительные сведения. '
             'Текущие показатели кошки — факты для тона: ' + json.dumps({k: round(state[k]) for k in ('hunger', 'energy', 'happiness')}) + '. '
             'Настоящая долговременная память: ' + json.dumps(memory.get('facts', []), ensure_ascii=False) + '. '
             'Верни JSON: reply (текст без Markdown), emotion (content/curious/playful/thoughtful/sleepy), '
             'animation (idle/pet/groom/jump/play), remember (массив новых кратких фактов).'
         )
-        contents = [{'role': m['role'], 'parts': [{'text': m['text']}]} for m in memory.get('messages', [])[-16:]]
-        contents.append({'role': 'user', 'parts': [{'text': clean(message)}]})
-        response = await self.client.post('models/' + self.model + ':generateContent', json={
-            'systemInstruction': {'parts': [{'text': instructions}]}, 'contents': contents,
-            'generationConfig': {'temperature': 0.8, 'maxOutputTokens': 1400, 'responseMimeType': 'application/json'},
-        })
-        response.raise_for_status()
-        parts = response.json()['candidates'][0]['content']['parts']
-        text = ''.join(p.get('text', '') for p in parts if not p.get('thought'))
-        parsed = Reply.model_validate_json(text)
+
+        # Normalize message sequence for Gemini: alternating user and model, starting with user
+        raw_msgs = memory.get('messages', [])
+        normalized = []
+        for m in raw_msgs:
+            role = 'user' if m.get('role') == 'user' else 'model'
+            msg_text = clean(str(m.get('text', '')).strip())
+            if not msg_text:
+                continue
+            if normalized and normalized[-1]['role'] == role:
+                normalized[-1]['parts'][0]['text'] += "\n" + msg_text
+            else:
+                normalized.append({'role': role, 'parts': [{'text': msg_text}]})
+
+        while normalized and normalized[0]['role'] != 'user':
+            normalized.pop(0)
+
+        normalized = normalized[-14:]
+        while normalized and normalized[0]['role'] != 'user':
+            normalized.pop(0)
+
+        user_msg = clean(message)
+        if normalized and normalized[-1]['role'] == 'user':
+            normalized[-1]['parts'][0]['text'] += "\n" + user_msg
+        else:
+            normalized.append({'role': 'user', 'parts': [{'text': user_msg}]})
+
+        body = {
+            'systemInstruction': {'parts': [{'text': instructions}]},
+            'contents': normalized,
+            'generationConfig': {
+                'temperature': 0.8,
+                'maxOutputTokens': 1400,
+                'responseMimeType': 'application/json'
+            },
+        }
+
+        response = None
+        for attempt in range(2):
+            try:
+                response = await self.client.post('models/' + self.model + ':generateContent', json=body)
+                if response.status_code in (429, 503) and attempt == 0:
+                    logger.warning("Gemini transient %s, retrying after 1.5s", response.status_code)
+                    await asyncio.sleep(1.5)
+                    continue
+                response.raise_for_status()
+                break
+            except httpx.HTTPStatusError as e:
+                if attempt == 0 and e.response.status_code in (429, 503):
+                    logger.warning("Gemini transient HTTPStatusError %s, retrying", e.response.status_code)
+                    await asyncio.sleep(1.5)
+                    continue
+                logger.error("Gemini request failed: %s %s", e.response.status_code, e.response.text[:300])
+                raise
+
+        data = response.json()
+        candidates = data.get('candidates', [])
+        if not candidates:
+            raise ValueError('Gemini returned no candidates')
+
+        parts = candidates[0].get('content', {}).get('parts', [])
+        text = ''.join(p.get('text', '') for p in parts if not p.get('thought')).strip()
+
+        if text.startswith("```"):
+            text = re.sub(r"^```(?:json)?\s*", "", text)
+            text = re.sub(r"\s*```$", "", text).strip()
+
+        try:
+            parsed = Reply.model_validate_json(text)
+        except Exception as parse_err:
+            logger.warning("JSON parse failed on Gemini output: %s; falling back. Raw: %s", parse_err, text[:200])
+            reply_match = re.search(r'"reply"\s*:\s*"([^"\\]*(?:\\.[^"\\]*)*)"', text)
+            if reply_match:
+                extracted = reply_match.group(1).encode().decode('unicode_escape', errors='ignore')
+                parsed = Reply(reply=extracted, emotion='content', animation='idle', remember=[])
+            else:
+                clean_raw = re.sub(r'[\{\}\[\]"]', '', text).strip()
+                parsed = Reply(reply=clean_raw[:800] or 'Мурр, я тебя слышу!', emotion='content', animation='idle', remember=[])
+
         parsed.reply = clean(parsed.reply)
         parsed.remember = [clean(f[:120]) for f in parsed.remember if f.strip()]
         return parsed

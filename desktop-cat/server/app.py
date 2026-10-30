@@ -253,7 +253,9 @@ def create_app(store=None, token=None, mind=None):
             if answer is None:
                 try:
                     generated = await mind.reply(state, message)
-                except (httpx.HTTPError, ValueError, KeyError, IndexError):
+                except (httpx.HTTPError, ValueError, KeyError, IndexError) as err:
+                    import logging
+                    logging.getLogger("desktop_cat.chat").error("Chat reply error: %s", err, exc_info=True)
                     raise HTTPException(503, 'Intelligence unavailable; dialogue has not been saved') from None
 
                 def remember(current):
